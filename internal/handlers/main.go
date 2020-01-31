@@ -1,63 +1,93 @@
 package handlers
 
 import (
-	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
-	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/pbaettig/gorem-ipsum/internal/config"
+	"github.com/pbaettig/gorem-ipsum/internal/templates"
 )
 
-type healthcheckHandlerConfig struct {
-	sync.Mutex
-	FailConseq int32
-	FailRatio  float32
-}
-
 var (
-	healthcheckConfig healthcheckHandlerConfig
+	healthHandlerRequestCount int64 = 0
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-
-	healthcheckConfig = healthcheckHandlerConfig{
-		FailConseq: 0,
-		FailRatio:  0,
-	}
 }
 
 // HelloWorldHandler says Hello world
 func HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Hello, World")
+	templates.Base.Render(templates.BaseData{Body: "Hello World"}, w)
 }
 
 // HealthHandler responds to health checks
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
-	if healthcheckConfig.FailConseq > 0 {
-		w.WriteHeader(500)
+	defer func() {
+		atomic.AddInt64(&healthHandlerRequestCount, 1)
+	}()
 
-		healthcheckConfig.Lock()
-		healthcheckConfig.FailConseq--
-		healthcheckConfig.Unlock()
+	const (
+		failureStatusCode = http.StatusInternalServerError
+		successStatusCode = http.StatusOK
+	)
+
+	if config.Healthcheck.FailSeq > 0 {
+		config.Healthcheck.Lock()
+		config.Healthcheck.FailSeq--
+		config.Healthcheck.Unlock()
+
+		log.Println("fail consec")
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if healthcheckConfig.FailRatio > 0 {
-		if rand.Float32() <= healthcheckConfig.FailRatio {
-			w.WriteHeader(500)
+	if config.Healthcheck.FailEvery > 0 {
+		if healthHandlerRequestCount == int64(config.Healthcheck.FailEvery-1) {
+			// TODO: is this concurrency safe or do I need to introduce a lock?
+			// healthHandlerRequestCount is increased immediately after returning
+			// so we set it to -1 here
+			healthHandlerRequestCount = -1
+
+			log.Println("fail every")
+			w.WriteHeader(failureStatusCode)
 			return
 		}
 	}
 
-	w.WriteHeader(200)
+	if config.Healthcheck.FailRatio > 0 {
+		r := rand.Float64()
+		log.Printf("%f >= %f", config.Healthcheck.FailRatio, r)
+
+		if config.Healthcheck.FailRatio >= r+0.01 {
+			log.Println("fail ratio")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(successStatusCode)
+}
+
+// GoremIpsumHandler ...
+func GoremIpsumHandler(w http.ResponseWriter, r *http.Request) {}
+
+// InfoHandler ...
+func InfoHandler(w http.ResponseWriter, r *http.Request) {
+	d := new(templates.InfoData)
+	d.FromRequest(r)
+
+	templates.Info.Render(*d, w)
 }
 
 // ConfigFailHandler configures healthcheck failures
 func ConfigFailHandler(w http.ResponseWriter, r *http.Request) {
-	healthcheckConfig.Lock()
-	defer healthcheckConfig.Unlock()
-	healthcheckConfig.FailConseq = 3
+	config.Healthcheck.Lock()
+	defer config.Healthcheck.Unlock()
+	config.Healthcheck.FailSeq = 3
 
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 }
