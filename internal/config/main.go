@@ -1,9 +1,13 @@
 package config
 
 import (
+	"os"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
+// HealthcheckConfig ...
 type HealthcheckConfig struct {
 	sync.Mutex
 	FailSeq   int
@@ -11,9 +15,20 @@ type HealthcheckConfig struct {
 	FailEvery int
 }
 
-var Healthcheck HealthcheckConfig
+var (
+	// Hostname ...
+	Hostname string
+
+	// Healthcheck ...
+	Healthcheck HealthcheckConfig
+)
 
 func init() {
+	var err error
+	Hostname, err = os.Hostname()
+	if err != nil {
+		log.Panic("cannot determine system hostname")
+	}
 	Healthcheck = HealthcheckConfig{
 		FailSeq:   0,
 		FailRatio: 0.0,

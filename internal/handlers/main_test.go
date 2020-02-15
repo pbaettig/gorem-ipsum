@@ -37,7 +37,7 @@ func TestHelloWorldHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			HelloWorldHandler(tt.args.w, tt.args.r)
+			HelloWorld.ServeHTTP(tt.args.w, tt.args.r)
 		})
 		resp := tt.args.w.Result()
 		if resp.StatusCode != tt.want.status {
@@ -85,12 +85,6 @@ func TestHealthHandler(t *testing.T) {
 			conf{FailSeq: 0, failRatio: 0},
 		},
 		{
-			"FailRatio0.5",
-			args{httptest.NewRecorder(), httptest.NewRequest("GET", "http://example.com/foo", nil)},
-			want{200, nil},
-			conf{FailSeq: 0, failRatio: 0.5},
-		},
-		{
 			"FailSeq1",
 			args{httptest.NewRecorder(), httptest.NewRequest("GET", "http://example.com/foo", nil)},
 			want{500, nil},
@@ -101,7 +95,7 @@ func TestHealthHandler(t *testing.T) {
 		config.Healthcheck.FailSeq = tt.conf.FailSeq
 		config.Healthcheck.FailRatio = tt.conf.failRatio
 		t.Run(tt.name, func(t *testing.T) {
-			HealthHandler(tt.args.w, tt.args.r)
+			Health.ServeHTTP(tt.args.w, tt.args.r)
 		})
 
 		resp := tt.args.w.Result()
@@ -111,7 +105,7 @@ func TestHealthHandler(t *testing.T) {
 		}
 
 		b, _ := ioutil.ReadAll(resp.Body)
-		if string(b) != string(tt.want.body) {
+		if tt.want.body != nil && string(b) != string(tt.want.body) {
 			t.Errorf("Test %s failed. Wanted HTTP response body '%s', got '%s'", tt.name, "Hello, world", string(b))
 			t.FailNow()
 		}
@@ -134,7 +128,7 @@ func TestHealthHandlerRatios(t *testing.T) {
 				w := httptest.NewRecorder()
 				r := httptest.NewRequest("GET", "http://example.com/foo", nil)
 
-				HealthHandler(w, r)
+				Health.ServeHTTP(w, r)
 				resp := w.Result()
 				if resp.StatusCode == http.StatusInternalServerError {
 					failed++

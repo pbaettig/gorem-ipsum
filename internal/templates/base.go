@@ -10,19 +10,19 @@ type BaseData struct {
 	Body string
 }
 
-// BaseTemplate ...
-type BaseTemplate struct{ *template.Template }
+// baseTemplate ...
+type baseTemplate struct{ *template.Template }
 
 // Render ...
-func (t BaseTemplate) Render(data BaseData, w io.Writer) {
+func (t baseTemplate) Render(data BaseData, w io.Writer) {
 	t.Execute(w, data)
 }
 
 var (
 	// Base ...
-	Base BaseTemplate
+	Base baseTemplate
 )
 
 func init() {
-	Base = BaseTemplate{mustParse("base", "<p>{{ .Body }}</p>")}
+	Base = baseTemplate{mustParse("base", "<p>{{ .Body }}</p>")}
 }

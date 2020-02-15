@@ -21,17 +21,17 @@ func (d *InfoData) FromRequest(r *http.Request) {
 	d.Host = r.Host
 }
 
-// InfoTemplate ...
-type InfoTemplate struct{ *template.Template }
+// infoTemplate ...
+type infoTemplate struct{ *template.Template }
 
 // Render ...
-func (t InfoTemplate) Render(data InfoData, w io.Writer) {
+func (t infoTemplate) Render(data InfoData, w io.Writer) {
 	t.Execute(w, data)
 }
 
 var (
 	// Info ..
-	Info InfoTemplate
+	Info infoTemplate
 )
 
 const (
@@ -42,6 +42,11 @@ const (
 		<td>Server Hostname</td>
 		<td>{{ .ServerHostname }}</td>
 	</tr>
+	
+</table>
+<h3>Headers</h3>
+<table>
+	
 	<tr>
 		<td>Host</td>
 		<td>{{ .Host }}</td>
@@ -56,5 +61,5 @@ const (
 )
 
 func init() {
-	Info = InfoTemplate{mustParse("info", body)}
+	Info = infoTemplate{mustParse("info", body)}
 }

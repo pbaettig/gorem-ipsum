@@ -1,0 +1,4 @@
+- enable config through commandline parameter / environment variables
+- make healthchecks configurable at runtime
+- add prometheus instrumentation
+- implement CI pipeline

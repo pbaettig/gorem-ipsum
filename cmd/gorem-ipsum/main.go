@@ -1,10 +1,9 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
-	"github.com/pbaettig/gorem-ipsum/internal/config"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/pbaettig/gorem-ipsum/internal/middleware"
 
@@ -12,20 +11,21 @@ import (
 	"github.com/pbaettig/gorem-ipsum/internal/handlers"
 )
 
-func main() {
-	config.Healthcheck.FailSeq = 0
-	config.Healthcheck.FailRatio = 0
-	config.Healthcheck.FailEvery = 3
+func init() {
+	log.SetLevel(log.DebugLevel)
+}
 
+func main() {
 	root := mux.NewRouter()
 	config := root.PathPrefix("/config").Subrouter()
 
 	root.Use(middleware.Log)
-	root.HandleFunc("/", handlers.HelloWorldHandler)
-	root.HandleFunc("/health", handlers.HealthHandler)
-	root.HandleFunc("/info", handlers.InfoHandler)
+	root.Handle("/", handlers.HelloWorld)
+	root.Handle("/health", handlers.Health)
+	root.Handle("/info", handlers.Info)
+	root.Handle("/count", handlers.Count)
 
-	config.HandleFunc("/fail", handlers.ConfigFailHandler)
+	config.Handle("/fail", handlers.FailConfig)
 	config.Use(middleware.Authenticate)
 
 	http.Handle("/", root)
