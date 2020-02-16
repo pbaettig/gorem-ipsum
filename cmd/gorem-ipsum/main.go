@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/pbaettig/gorem-ipsum/internal/middleware"
@@ -18,6 +19,7 @@ func init() {
 func main() {
 	root := mux.NewRouter()
 	config := root.PathPrefix("/config").Subrouter()
+	internal := root.PathPrefix("/internal").Subrouter()
 
 	root.Use(middleware.Log)
 	root.Handle("/", handlers.HelloWorld)
@@ -27,6 +29,8 @@ func main() {
 
 	config.Handle("/fail", handlers.FailConfig)
 	config.Use(middleware.Authenticate)
+
+	internal.Handle("/metrics", promhttp.Handler())
 
 	http.Handle("/", root)
 	log.Fatal(http.ListenAndServe(":8080", nil))
