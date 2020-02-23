@@ -1,5 +1,4 @@
 - enable config through commandline parameter / environment variables
-- make healthchecks configurable at runtime
 - add prometheus instrumentation
 - implement CI pipeline
 - pack static assets into the binary, look at [packr](https://github.com/gobuffalo/packr/tree/master/v2)
