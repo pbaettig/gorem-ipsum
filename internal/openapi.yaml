@@ -1,0 +1,82 @@
+openapi: "3.0.0"
+info:
+  title: Simple API overview
+  version: 2.0.0
+paths:
+  /health:
+    get:
+      operationId: healthcheck
+      summary: provide a healthcheck, response depends on the config set by /config/health
+      responses:
+        '200':
+          description: healthcheck passed
+        '500':
+          description: healthcheck failed
+  /health/history:
+    get:
+      operationId: healthcheck
+      summary: 
+      responses:
+        '200':
+          description: healthcheck passed
+        '500':
+          description: healthcheck failed
+
+  /config/health:
+    get:
+      parameters:
+        - in: query
+          name: failevery
+          description: let the healthcheck fail every n requests
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: failratio
+          description: let n out of 1.0 healthchecks fail randomly, e.g. 0.2 => ~20% healthchecks fail
+          required: false
+          schema:
+            type: float
+            minimum: 0
+            maximum: 1.0
+        - in: query
+          name: failseq
+          description: fail the next n healthchecks
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses: 
+        '200':
+          description: success
+          content:
+            application/json: 
+              examples:
+                foo:
+                  value: {
+                    "FailSeq": 0,
+                    "FailRatio": 0,
+                    "FailEvery": 0
+                  }
+        '400':
+          description: bad request. 
+          content:
+              text/plain:
+
+
+
+
+  /count:
+    get:
+      operationId: count
+      summary: returns the number of times this endpoint has been called
+      responses:
+        '200':
+          content:
+            text/plain:
+              examples: 
+                1:
+                  value: 1
+        
+  
