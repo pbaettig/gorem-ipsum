@@ -1,6 +1,7 @@
-- enable config through commandline parameter / environment variables
+- enable config through commandline parameter
 - add prometheus instrumentation
 - implement CI pipeline
 - pack static assets into the binary, look at [packr](https://github.com/gobuffalo/packr/tree/master/v2)
 - write JS frontend
 - add benchmarks
+- add integration / end-to-end tests
