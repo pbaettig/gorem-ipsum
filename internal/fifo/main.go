@@ -19,7 +19,7 @@ func (i *Int) Add(n int) {
 
 	if len(i.data) >= i.capacity {
 		// max capacity reached
-		newdata := make([]int, 9)
+		newdata := make([]int, i.capacity-1)
 		copy(newdata, i.data[1:])
 		i.data = newdata
 	}

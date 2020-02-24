@@ -3,7 +3,7 @@ package fifo
 import "testing"
 
 func TestFifoArray(t *testing.T) {
-	cap := 10
+	cap := 23
 	fi := NewInt(cap)
 	t.Run("test-normal", func(t *testing.T) {
 		for i := 0; i < 93; i++ {
