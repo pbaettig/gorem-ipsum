@@ -3,3 +3,4 @@
 - implement CI pipeline
 - pack static assets into the binary, look at [packr](https://github.com/gobuffalo/packr/tree/master/v2)
 - write JS frontend
+- add benchmarks
