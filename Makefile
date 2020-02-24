@@ -1,6 +1,6 @@
 pkgprefix = github.com/pbaettig/gorem-ipsum
 
-gorem: cmd/gorem/main.go go.mod go.sum
+gorem: cmd/gorem/main.go internal/config/*.go internal/fifo/*.go internal/handlers/*.go internal/middleware/*.go internal/templates/*.go
 	go build -o gorem cmd/gorem/main.go
 
 .PHONY: test
