@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/pbaettig/gorem-ipsum/internal/config"
 	"github.com/pbaettig/gorem-ipsum/internal/middleware"
 
 	"github.com/gorilla/mux"
@@ -18,18 +18,19 @@ import (
 )
 
 func init() {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(config.LogLevel)
 }
 
 func mainServer(h http.Handler, errs chan<- error) *http.Server {
 	srv := &http.Server{
-		Addr:         "0.0.0.0:8080",
-		WriteTimeout: time.Second * 5,
-		ReadTimeout:  time.Second * 5,
-		IdleTimeout:  time.Second * 60,
+		Addr:         config.MainServerAddress,
+		WriteTimeout: config.MainServerWriteTimeout,
+		ReadTimeout:  config.MainServerReadTimeout,
+		IdleTimeout:  config.MainServerIdleTimeout,
 		Handler:      h,
 	}
 	go func() {
+		log.Infof("starting main server on %s", config.MainServerAddress)
 		if err := srv.ListenAndServe(); err != nil {
 			errs <- fmt.Errorf("main server: %w", err)
 		}
@@ -40,13 +41,14 @@ func mainServer(h http.Handler, errs chan<- error) *http.Server {
 
 func metricsServer(errs chan<- error) *http.Server {
 	srv := &http.Server{
-		Addr:         "0.0.0.0:9100",
-		WriteTimeout: time.Second * 5,
-		ReadTimeout:  time.Second * 5,
-		IdleTimeout:  time.Second * 60,
+		Addr:         config.MetricsServerAddress,
+		WriteTimeout: config.MetricsServerWriteTimeout,
+		ReadTimeout:  config.MetricsServerReadTimeout,
+		IdleTimeout:  config.MetricsServerIdleTimeout,
 		Handler:      promhttp.Handler(),
 	}
 	go func() {
+		log.Infof("starting metrics server on %s", config.MetricsServerAddress)
 		if err := srv.ListenAndServe(); err != nil {
 			errs <- fmt.Errorf("metrics server: %w", err)
 		}
@@ -60,7 +62,7 @@ func main() {
 	signal.Notify(sigs, os.Interrupt)
 
 	root := mux.NewRouter()
-	config := root.PathPrefix("/config").Subrouter()
+	configSubrouter := root.PathPrefix("/config").Subrouter()
 	// internal := root.PathPrefix("/internal").Subrouter()
 
 	root.Use(middleware.Log)
@@ -72,8 +74,8 @@ func main() {
 	root.Handle("/http/get", handlers.HelloWorld)
 	root.Handle("/http/post", handlers.HelloWorld)
 
-	config.Handle("/health", handlers.HealthConfig)
-	config.Use(middleware.Authenticate)
+	configSubrouter.Handle("/health", handlers.HealthConfig)
+	configSubrouter.Use(middleware.Authenticate)
 
 	srvError := make(chan error)
 	mainSrv := mainServer(root, srvError)
@@ -85,7 +87,7 @@ func main() {
 			log.Debugf("Singal '%s' received", s.String())
 
 			// create a context to wait for open connections when shutting down servers
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(15*time.Second))
+			ctx, cancel := context.WithTimeout(context.Background(), config.ServerShutdownGracePeriod)
 			defer cancel()
 
 			log.Info("shutting down servers")
