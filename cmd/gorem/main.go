@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/pbaettig/gorem-ipsum/internal/config"
+	"github.com/pbaettig/gorem-ipsum/internal/metrics"
 	"github.com/pbaettig/gorem-ipsum/internal/middleware"
 
 	"github.com/gorilla/mux"
@@ -71,7 +73,7 @@ func main() {
 	root.Handle("/health/history", handlers.HealthHistory)
 	root.Handle("/info", handlers.Info)
 	root.Handle("/count", handlers.Count)
-	root.Handle("/http/get", handlers.HelloWorld)
+	root.Handle("/http/get", handlers.RequestGet)
 	root.Handle("/http/post", handlers.HelloWorld)
 
 	configSubrouter.Handle("/health", handlers.HealthConfig)
@@ -81,11 +83,15 @@ func main() {
 	mainSrv := mainServer(root, srvError)
 	metricSrv := metricsServer(srvError)
 
+	sg := metrics.NewSineGenerator(time.Second, 10.0, 120)
+	sg.Run()
+
 	for {
 		select {
 		case s := <-sigs:
-			log.Debugf("Singal '%s' received", s.String())
+			log.Debugf("Signal '%s' received", s.String())
 
+			sg.Stop()
 			// create a context to wait for open connections when shutting down servers
 			ctx, cancel := context.WithTimeout(context.Background(), config.ServerShutdownGracePeriod)
 			defer cancel()

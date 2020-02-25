@@ -55,7 +55,7 @@ func fromEnv() {
 		HealthHistoryCapacity = int(i)
 	}
 
-	ll := getEnv("GOREM_LOGLEVEL", "xsdg")
+	ll := getEnv("GOREM_LOGLEVEL", "debug")
 	LogLevel, err = log.ParseLevel(ll)
 	if err != nil {
 		log.Warnf("unable to parse log level: %s", err.Error())
