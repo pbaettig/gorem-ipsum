@@ -6,9 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/pbaettig/gorem-ipsum/internal/config"
@@ -32,7 +30,7 @@ func mainServer(h http.Handler, errs chan<- error) *http.Server {
 		Handler:      h,
 	}
 	go func() {
-		log.Infof("starting main server on %s", config.MainServerAddress)
+		log.Debugf("starting main server on %s", config.MainServerAddress)
 		if err := srv.ListenAndServe(); err != nil {
 			errs <- fmt.Errorf("main server: %w", err)
 		}
@@ -41,31 +39,9 @@ func mainServer(h http.Handler, errs chan<- error) *http.Server {
 	return srv
 }
 
-func metricsServer(errs chan<- error) *http.Server {
-	srv := &http.Server{
-		Addr:         config.MetricsServerAddress,
-		WriteTimeout: config.MetricsServerWriteTimeout,
-		ReadTimeout:  config.MetricsServerReadTimeout,
-		IdleTimeout:  config.MetricsServerIdleTimeout,
-		Handler:      promhttp.Handler(),
-	}
-	go func() {
-		log.Infof("starting metrics server on %s", config.MetricsServerAddress)
-		if err := srv.ListenAndServe(); err != nil {
-			errs <- fmt.Errorf("metrics server: %w", err)
-		}
-	}()
-
-	return srv
-}
-
-func main() {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, os.Interrupt)
-
+func setupRouter() *mux.Router {
+	// Setup Routes
 	root := mux.NewRouter()
-	configSubrouter := root.PathPrefix("/config").Subrouter()
-	// internal := root.PathPrefix("/internal").Subrouter()
 
 	root.Use(middleware.Log)
 	root.Handle("/", handlers.HelloWorld)
@@ -76,36 +52,50 @@ func main() {
 	root.Handle("/http/get", handlers.RequestGet)
 	root.Handle("/http/post", handlers.HelloWorld)
 
+	configSubrouter := root.PathPrefix("/config").Subrouter()
 	configSubrouter.Handle("/health", handlers.HealthConfig)
 	configSubrouter.Use(middleware.Authenticate)
 
+	return root
+}
+
+func main() {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt)
+
+	// Start HTTP servers
 	srvError := make(chan error)
-	mainSrv := mainServer(root, srvError)
-	metricSrv := metricsServer(srvError)
+	mainSrv := mainServer(setupRouter(), srvError)
+	metricSrv := metrics.StartServer(srvError)
 
-	sg := metrics.NewSineGenerator(time.Second, 10.0, 120)
-	sg.Run()
+	// start metrics generators
+	metrics.SineGenerator.Run()
+	metrics.SawtoothGenerator.Run()
+	metrics.TriangleGenerator.Run()
 
-	for {
-		select {
-		case s := <-sigs:
-			log.Debugf("Signal '%s' received", s.String())
+	select {
+	case s := <-sigs:
+		fmt.Println()
+		log.Debugf("Signal '%s' received", s.String())
 
-			sg.Stop()
-			// create a context to wait for open connections when shutting down servers
-			ctx, cancel := context.WithTimeout(context.Background(), config.ServerShutdownGracePeriod)
-			defer cancel()
+		metrics.SineGenerator.Stop()
+		metrics.SawtoothGenerator.Stop()
+		metrics.TriangleGenerator.Stop()
 
-			log.Info("shutting down servers")
-			mainSrv.Shutdown(ctx)
-			metricSrv.Shutdown(ctx)
+		// create a context to wait for open connections when shutting down servers
+		ctx, cancel := context.WithTimeout(context.Background(), config.ServerShutdownGracePeriod)
+		defer cancel()
 
-			log.Info("goodbye")
-			os.Exit(0)
+		log.Debug("shutting down servers")
+		mainSrv.Shutdown(ctx)
+		metricSrv.Shutdown(ctx)
 
-		case err := <-srvError:
-			// exit with an error if any one of the servers failed to start
-			log.Fatal(err.Error())
-		}
+		log.Debug("goodbye")
+		os.Exit(0)
+
+	case err := <-srvError:
+		// exit with an error if any one of the servers failed to start
+		log.Fatal(err.Error())
 	}
+
 }

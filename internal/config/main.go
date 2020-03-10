@@ -11,7 +11,11 @@ import (
 )
 
 var (
-	Healthcheck               *HealthcheckConfig
+	Healthcheck *HealthcheckConfig = &HealthcheckConfig{
+		FailSeq:   0,
+		FailRatio: 0.0,
+		FailEvery: 0,
+	}
 	HealthHistoryCapacity     int
 	Hostname                  string
 	LogLevel                  logrus.Level
@@ -24,6 +28,9 @@ var (
 	MetricsServerReadTimeout  time.Duration
 	MetricsServerWriteTimeout time.Duration
 	ServerShutdownGracePeriod time.Duration
+	MetricsSineAmplitude      float64       = 100
+	MetricsSineUpdateInterval time.Duration = time.Second
+	MetricsSinePeriod         time.Duration = 30 * time.Second
 )
 
 // HealthcheckConfig ...
@@ -103,10 +110,6 @@ func init() {
 	if err != nil {
 		log.Panic("cannot determine system hostname")
 	}
-	Healthcheck = &HealthcheckConfig{
-		FailSeq:   0,
-		FailRatio: 0.0,
-		FailEvery: 0,
-	}
+
 	fromEnv()
 }

@@ -1,6 +1,5 @@
 # ToDos
 
-- add prometheus instrumentation, test metrics (e.g. sine, random, e.g.)
 - enable config through commandline parameter
 - add endpoints for sending HTTP requests to other services
 - add integration / end-to-end tests
