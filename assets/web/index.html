@@ -5,33 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>gorem-ipsum</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <div class="grid-container">
-      <div class="header">
-        <h1>gorem-ipsum</h1>
-      </div>
-      <div class="nav">
-        <div><a href="#">HOME</a></div>
-        <div><a href="/health.html">HEALTH</a></div>
-        <div><a href="#">STATUS</a></div>
-        <div><a href="#">REQUEST</a></div>
-      </div>
-      <div class="content">
-        <p>
-          Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
-          nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat,
-          sed diam voluptua. At vero eos et accusam et justo duo dolores et ea
-          rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem
-          ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur
-          sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et
-          dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam
-          et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea
-          takimata sanctus est Lorem ipsum dolor sit amet.
-        </p>
-      </div>
+    <div class="health-status up">
+      <h3>N/A</h3>
     </div>
-    <script src="script.js"></script>
+    <div class="grid-container">
+      <div class="health-config">
+        <h3>Healthcheck config</h3>
+        <form id="health-config-form">
+          <div>
+            <label for="failevery">Fail every n requests</label>
+            <input type="text" id="health-config-failevery" placeholder="10" />
+            <button type="button" id="health-config-failevery-set">Set</button>
+          </div>
+          <div>
+            <label for="failratio">Fail ratio</label>
+            <input type="text" id="health-config-failratio" placeholder="0.1" />
+            <button type="button" id="health-config-failratio-set">Set</button>
+          </div>
+          <div>
+            <label for="failseq">Fail next n requests</label>
+            <input type="text" id="health-config-failseq" placeholder="3" />
+            <button type="button" id="health-config-failseq-set">Set</button>
+          </div>
+          <button type="reset">Clear config</button>
+        </form>
+      </div>
+      <div class="health-history">
+        <h3>Health history</h3>
+        <ul id="health-history-list">
+          <!-- <li class="status-up">✓</li>
+          <li class="status-down">✗</li> -->
+        </ul>
+      </div>
+
+      <hr />
+      <div class="http-label">
+        <form id="http-form">
+          <input type="text" id="http-url" placeholder="https://" />
+          <button type="submit" id="http-get">GET</button>
+        </form>
+      </div>
+      <hr />
+      <div class="http-content"></div>
+    </div>
+    <script src="/script.js"></script>
   </body>
 </html>
