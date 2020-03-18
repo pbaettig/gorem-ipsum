@@ -12,10 +12,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pbaettig/gorem-ipsum/internal/fifo"
 	"github.com/pbaettig/gorem-ipsum/internal/metrics"
 
-	"github.com/pbaettig/gorem-ipsum/internal/fifo"
-
+	"github.com/markbates/pkger"
 	"github.com/pbaettig/gorem-ipsum/internal/config"
 	"github.com/pbaettig/gorem-ipsum/internal/templates"
 	log "github.com/sirupsen/logrus"
@@ -45,6 +45,9 @@ var (
 	// RequestGet ...
 	RequestGet handler
 
+	// Root ...
+	Root http.Handler
+
 	// hhstore (health history Store) holds the n last healthcheck results
 	hhstore *fifo.Int
 
@@ -66,6 +69,7 @@ func init() {
 	Count = newHandler("Count", countHandler)
 	HealthConfig = newHandler("HealthConfig", healthConfigHandler)
 	RequestGet = newHandler("RequestGet", requestGetHandler)
+	Root = http.FileServer(pkger.Dir("/assets/web/"))
 
 	// keep a history of the last n healthcheck results
 	hhstore = fifo.NewInt(config.HealthHistoryCapacity)
@@ -77,7 +81,6 @@ func init() {
 
 	headerJSON = make(http.Header)
 	headerJSON.Set("Content-Type", "application/json")
-
 }
 
 type handleFunc func(r *http.Request, h handler) ([]byte, http.Header, int)

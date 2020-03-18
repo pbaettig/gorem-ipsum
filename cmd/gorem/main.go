@@ -42,19 +42,21 @@ func mainServer(h http.Handler, errs chan<- error) *http.Server {
 func setupRouter() *mux.Router {
 	// Setup Routes
 	root := mux.NewRouter()
+	root.Use(middleware.CorsHeader)
 
-	root.Use(middleware.Log)
-	root.Handle("/", handlers.HelloWorld)
-	root.Handle("/health", handlers.Health)
-	root.Handle("/health/history", handlers.HealthHistory)
-	root.Handle("/info", handlers.Info)
-	root.Handle("/count", handlers.Count)
-	root.Handle("/http/get", handlers.RequestGet)
-	root.Handle("/http/post", handlers.HelloWorld)
+	api := root.PathPrefix("/api").Subrouter()
+	api.Handle("/health", handlers.Health)
+	api.Handle("/health/history", handlers.HealthHistory)
+	api.Handle("/info", handlers.Info)
+	api.Handle("/count", handlers.Count)
+	api.Handle("/http/get", handlers.RequestGet)
+	api.Handle("/http/post", handlers.HelloWorld)
 
-	configSubrouter := root.PathPrefix("/config").Subrouter()
+	configSubrouter := api.PathPrefix("/config").Subrouter()
 	configSubrouter.Handle("/health", handlers.HealthConfig)
 	configSubrouter.Use(middleware.Authenticate)
+
+	root.PathPrefix("/").Handler(handlers.Root)
 
 	return root
 }
