@@ -23,7 +23,10 @@ const healthStatusDiv = document.querySelector('.health-status');
 
 const httpGetBtn = document.getElementById('http-get');
 const httpUrlTxt = document.getElementById('http-url');
-const httpContentDiv = document.querySelector('.http-content');
+const httpBodyDiv = document.getElementById('http-body');
+const httpRespStatusSpan = document.getElementById('http-resp-status')
+const httpRespTookSpan = document.getElementById('http-resp-took')
+const httpRespHeadersTable = document.getElementById('http-resp-headers')
 const healthHistoryUl = document.getElementById('health-history-list');
 const httpForm = document.getElementById('http-form');
 
@@ -107,7 +110,28 @@ function updateHealthStatus() {
   });
 }
 
+function performGetRequest() {}
+
+function updateHealthConfig() {
+  fetch(
+    '/api/config/health',
+    { 
+      headers: new Headers({
+        'Authorization': 'Basic '+btoa('username:password'), 
+      }), 
+    }
+  ).then(response => response.json())
+  .then((conf) => {
+    if (healthCheckConfigFailSeq !== document.activeElement) {
+      healthCheckConfigFailSeq.value =  conf.FailSeq
+    }
+  }
+  );
+
+}
+
 function updateUI() {
+  updateHealthConfig();
   updateHealthStatus();
 }
 
@@ -132,6 +156,15 @@ function toggleHealthStatus() {
 //   toggleHealthStatus();
 // });
 
+function escapeHtml(unsafe) {
+  return unsafe
+       .replace(/&/g, "&amp;")
+       .replace(/</g, "&lt;")
+       .replace(/>/g, "&gt;")
+       .replace(/"/g, "&quot;")
+       .replace(/'/g, "&#039;");
+}
+
 console.log(httpForm);
 httpForm.addEventListener('submit', function(e) {
   e.preventDefault();
@@ -139,13 +172,32 @@ httpForm.addEventListener('submit', function(e) {
   if (httpUrlTxt.value === '') {
     return;
   }
-  httpContentDiv.innerHTML = '';
-  console.log(httpUrlTxt.value);
-  fetch(httpUrlTxt.value)
-    .then(response => response.text())
-    .then(r => {
-      httpContentDiv.innerHTML = r;
-    });
+  fetch(
+    `/api/http/get?url=${encodeURI(httpUrlTxt.value)}`,
+  ).then(response => response.json())
+  .then((data) => {
+    console.log(data)
+    httpRespStatusSpan.innerText = data.Status
+    httpRespTookSpan.innerText = `${data.TookMs} ms`
+    
+    var empty = document.createElement('tbody');
+    var tbody = httpRespHeadersTable.firstChild
+    httpRespHeadersTable.replaceChild(empty, tbody)
+
+    for(const h in data.Headers) {
+      var tr = httpRespHeadersTable.insertRow();
+      var n = tr.insertCell();
+      var v = tr.insertCell();
+      n.innerText = h;
+      v.innerText = data.Headers[h].join('/');
+
+      console.log(tr);
+    }
+    httpBodyDiv.innerText = data.Body;
+  }
+  );
+
+  
 });
 
 healthCheckConfigForm.addEventListener('submit', function(e) {
