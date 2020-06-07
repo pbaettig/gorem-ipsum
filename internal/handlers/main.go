@@ -298,48 +298,72 @@ func healthConfigHandler(r *http.Request, h handler) ([]byte, http.Header, int) 
 	return []byte("failratio, failevery and failseq are mutually exclusive\n"), headerEmpty, http.StatusBadRequest
 }
 
-func requestGetHandler(r *http.Request, h handler) ([]byte, http.Header, int) {
-	type jsonResponse struct {
-		Headers http.Header
-		Body    string
-		Status  int
-		TookMs  int64
-	}
+type httpResponse struct {
+	Headers        http.Header
+	Body           string
+	ResponseStatus int
+	ServerStatus   string
+	TookMs         int64
+}
 
-	if err := r.ParseForm(); err != nil {
-		return []byte("cannot parse request params\n"), headerEmpty, http.StatusBadRequest
-	}
-	url, ok := r.Form["url"]
-	if !ok {
-		return []byte("url query parameter is required\n"), headerEmpty, http.StatusBadRequest
-	}
-
-	// Prepare a request with context for timeout
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, "GET", url[0], nil)
-	if err != nil {
-		return []byte(fmt.Sprintf("cannot build request: %s\n", err.Error())), headerEmpty, http.StatusInternalServerError
-	}
-
-	// execute the request
-	start := time.Now()
+func (hr *httpResponse) PopulateFromRequest(req *http.Request) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return []byte(fmt.Sprintf("request failed: %s\n", err.Error())), headerEmpty, http.StatusInternalServerError
+		hr.ServerStatus = fmt.Sprintf("request failed: %s\n", err.Error())
+		return
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return []byte(fmt.Sprintf("cannot read response body: %s\n", err.Error())), headerEmpty, http.StatusInternalServerError
+		hr.ServerStatus = fmt.Sprintf("cannot read response body: %s\n", err.Error())
+		return
 	}
 
-	took := time.Now().Sub(start)
+	hr.Body = string(body)
+	hr.Headers = resp.Header
+	hr.ResponseStatus = resp.StatusCode
 
-	rj := jsonResponse{Headers: resp.Header, Body: string(body), Status: resp.StatusCode, TookMs: took.Milliseconds()}
-	buf, err := json.MarshalIndent(&rj, "", "    ")
+}
+
+func requestGetHandler(r *http.Request, h handler) ([]byte, http.Header, int) {
+	var err error
+	var url []string
+	var ok bool
+	var ctx context.Context
+	var cancel context.CancelFunc
+	var start time.Time
+	var req *http.Request
+
+	hr := new(httpResponse)
+
+	if err = r.ParseForm(); err != nil {
+		hr.ServerStatus = "cannot parse request params"
+		goto Return
+	}
+	url, ok = r.Form["url"]
+	if !ok {
+		hr.ServerStatus = "url query parameter is required"
+		goto Return
+	}
+
+	// Prepare a request with context for timeout
+
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, err = http.NewRequestWithContext(ctx, "GET", url[0], nil)
+	if err != nil {
+		hr.ServerStatus = fmt.Sprintf("cannot build request: %s\n", err.Error())
+		goto Return
+	}
+
+	// execute the request
+	start = time.Now()
+	hr.PopulateFromRequest(req)
+	hr.TookMs = time.Now().Sub(start).Milliseconds()
+
+Return:
+	buf, err := json.MarshalIndent(hr, "", "    ")
 	if err != nil {
 		return []byte(fmt.Sprintf("cannot marshal response JSON: %s\n", err.Error())), headerEmpty, http.StatusInternalServerError
 	}

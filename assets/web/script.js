@@ -23,7 +23,8 @@ const healthStatusDiv = document.querySelector('.health-status');
 
 const httpGetBtn = document.getElementById('http-get');
 const httpUrlTxt = document.getElementById('http-url');
-const httpBodyDiv = document.getElementById('http-body');
+const httpBodyDiv = document.querySelector('.http-body');
+const httpInfoDiv = document.querySelector('.http-info');
 const httpRespStatusSpan = document.getElementById('http-resp-status')
 const httpRespTookSpan = document.getElementById('http-resp-took')
 const httpRespHeadersTable = document.getElementById('http-resp-headers')
@@ -156,6 +157,19 @@ function toggleHealthStatus() {
 //   toggleHealthStatus();
 // });
 
+function checkStatus(status) {
+  if (status < 100) {
+    return false
+  }
+
+  let hundreds = d => Math.floor(d/100)
+  if (hundreds(status) == 5 || hundreds(status) == 4)  {
+    return false
+  }
+
+  return true
+}
+
 function escapeHtml(unsafe) {
   return unsafe
        .replace(/&/g, "&amp;")
@@ -172,12 +186,22 @@ httpForm.addEventListener('submit', function(e) {
   if (httpUrlTxt.value === '') {
     return;
   }
+  httpUrlTxt.disabled = true;
   fetch(
     `/api/http/get?url=${encodeURI(httpUrlTxt.value)}`,
-  ).then(response => response.json())
+  ).then((response) => {
+    return response.json()
+  })
   .then((data) => {
+    httpUrlTxt.disabled = false;
     console.log(data)
-    httpRespStatusSpan.innerText = data.Status
+    httpInfoDiv.style.removeProperty('display');
+    if (data.ServerStatus != "") {
+      httpRespStatusSpan.innerText = `server error: ${data.ServerStatus}`
+    } else {
+      httpRespStatusSpan.innerText = `HTTP${data.ResponseStatus}`
+    }
+    
     httpRespTookSpan.innerText = `${data.TookMs} ms`
     
     var empty = document.createElement('tbody');
@@ -195,7 +219,10 @@ httpForm.addEventListener('submit', function(e) {
     }
     httpBodyDiv.innerText = data.Body;
   }
-  );
+  )
+  .catch((error) => {
+    console.log(`!!!ERROR: ${error}`)
+  })
 
   
 });
